@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>爆速ToDoメモ</title>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0B0C">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background-color: #0B0B0C;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 70%),
+        radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 50%);
+      color: #F0F0F2;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      min-height: 100vh;
+      padding: 24px 16px 40px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* うっすら背景のワンちゃんイラスト */
+    .bg-dog-illustration {
+      position: fixed;
+      bottom: -10px;
+      right: -10px;
+      width: 260px;
+      height: 260px;
+      color: #FFFFFF;
+      opacity: 0.035;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: -0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h1::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #6366F1;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #6366F1;
+    }
+    .subtitle {
+      font-size: 0.75rem;
+      color: #666670;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+    }
+
+    /* メイン入力カード */
+    .input-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    .input-card:focus-within {
+      border-color: rgba(99, 102, 241, 0.4);
+      box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(99, 102, 241, 0.2);
+    }
+    .input-main {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .task-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #FFFFFF;
+      font-size: 1rem;
+      font-weight: 400;
+      padding: 4px 0;
+    }
+    .task-input::placeholder { color: #52525B; }
+    .add-btn {
+      background: #FFFFFF;
+      color: #0B0B0C;
+      border: none;
+      border-radius: 12px;
+      padding: 10px 18px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: transform 0.12s ease, background-color 0.2s ease;
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+      flex-shrink: 0;
+    }
+    .add-btn:active {
+      transform: scale(0.94);
+      background-color: #E4E4E7;
+    }
+
+    /* タグチップ & メタ操作エリア */
+    .meta-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tag-chips-container {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      flex: 1;
+    }
+    .selectable-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      color: #A1A1AA;
+      font-size: 0.78rem;
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .selectable-chip:active { transform: scale(0.95); }
+    .selectable-chip.selected {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: rgba(99, 102, 241, 0.5);
+      color: #C7D2FE;
+    }
+    .icon-only-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      color: #71717A;
+      padding: 6px 9px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+    }
+    .icon-only-btn:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.08); }
+    
+    .custom-tag-input {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      color: #E4E4E7;
+      font-size: 0.78rem;
+      padding: 5px 10px;
+      outline: none;
+      width: 70px;
+    }
+    .custom-tag-input::placeholder { color: #52525B; }
+
+    .date-trigger-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      color: #A1A1AA;
+      font-size: 0.78rem;
+      padding: 6px 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .date-trigger-btn:active { transform: scale(0.96); }
+    .date-trigger-btn.has-value {
+      color: #A5B4FC;
+      border-color: rgba(99, 102, 241, 0.4);
+      background: rgba(99, 102, 241, 0.12);
+    }
+
+    /* セクションタイトル */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding: 0 4px;
+    }
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #71717A;
+      text-transform: uppercase;
+    }
+    .section-count {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: #52525B;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+
+    /* タスクリスト */
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .task-card {
+      background: rgba(255, 255, 255, 0.025);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      transition: transform 0.15s ease, border-color 0.2s ease;
+    }
+    .task-card.is-pinned {
+      border-color: rgba(234, 179, 8, 0.3);
+      background: rgba(234, 179, 8, 0.03);
+    }
+    .task-left {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      flex: 1;
+    }
+    .checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+      transition: background-color 0.2s, border-color 0.2s, transform 0.12s ease;
+    }
+    .task-card.completed .checkbox {
+      background: #6366F1;
+      border-color: #6366F1;
+    }
+    .task-content {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .task-text {
+      font-size: 0.95rem;
+      color: #F4F4F5;
+      line-height: 1.45;
+      word-break: break-all;
+    }
+    .task-card.completed .task-text {
+      text-decoration: line-through;
+      color: #52525B;
+    }
+    .task-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .badge {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tag-badge {
+      background: rgba(255, 255, 255, 0.06);
+      color: #A1A1AA;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .date-badge {
+      background: rgba(99, 102, 241, 0.12);
+      color: #A5B4FC;
+      border: 1px solid rgba(99, 102, 241, 0.25);
+    }
+
+    .task-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: #52525B;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s, background 0.2s;
+    }
+    .icon-btn:hover, .icon-btn:active { color: #E4E4E7; background: rgba(255, 255, 255, 0.08); }
+    .icon-btn.pin-btn.active { color: #EAB308; }
+    .icon-btn.delete-btn:hover { color: #F87171; background: rgba(248, 113, 113, 0.1); }
+
+    /* アコーディオン */
+    .accordion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      padding: 8px 4px;
+      user-select: none;
+    }
+    .accordion-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chevron-icon {
+      transition: transform 0.25s ease;
+      color: #71717A;
+    }
+    .accordion-header.open .chevron-icon {
+      transform: rotate(180deg);
+    }
+    .accordion-body {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .accordion-body.open { display: flex; }
+
+    /* 空の状態 (Empty State) */
+    .empty-card {
+      background: rgba(255, 255, 255, 0.012);
+      border: 1px dashed rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 32px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .empty-icon {
+      width: 36px;
+      height: 36px;
+      color: #27272A;
+      stroke-width: 1.2;
+    }
+
+    /* モーダル共通 */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal-content {
+      background: #141416;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
+      padding: 22px;
+      width: 100%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.8);
+      transform: scale(0.95);
+      transition: transform 0.2s ease;
+    }
+    .modal-overlay.open .modal-content { transform: scale(1); }
+    .modal-title { font-size: 0.95rem; font-weight: 700; color: #FFFFFF; letter-spacing: 0.05em; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; color: #A1A1AA; font-weight: 500; }
+    
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .2s; border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px;
+      background-color: #FFFFFF; transition: .2s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #6366F1; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    .picker-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: #FFFFFF;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      color-scheme: dark;
+      outline: none;
+    }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .modal-btn {
+      padding: 9px 18px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+    }
+    .modal-btn.cancel { background: rgba(255, 255, 255, 0.05); color: #A1A1AA; }
+    .modal-btn.save { background: #6366F1; color: #FFFFFF; }
+
+    .tag-manage-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .tag-manage-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- 背景のワンちゃん（透かしSVG） -->
+  <svg class="bg-dog-illustration" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 20 32 Q 12 52 22 66 Q 32 52 32 36 Z" />
+    <path d="M 80 32 Q 88 52 78 66 Q 68 52 68 36 Z" />
+    <path d="M 28 32 Q 50 20 72 32 Q 82 48 76 72 Q 50 86 24 72 Q 18 48 28 32 Z" />
+    <circle cx="38" cy="46" r="3" fill="currentColor" />
+    <circle cx="62" cy="46" r="3" fill="currentColor" />
+    <ellipse cx="50" cy="58" rx="6" ry="4" fill="currentColor" />
+    <path d="M 50 62 Q 44 68 38 65" />
+    <path d="M 50 62 Q 56 68 62 65" />
+  </svg>
+
+  <div class="app-container">
+    <header class="app-header">
+      <h1>爆速ToDoメモ</h1>
+      <span class="subtitle">Quick Note</span>
+    </header>
+    
+    <div class="input-card">
+      <div class="input-main">
+        <input type="text" id="taskInput" class="task-input" placeholder="Quick note..." autofocus />
+        <button id="addBtn" class="add-btn">Add</button>
+      </div>
+      <div class="meta-inputs">
+        <div class="meta-row">
+          <div id="tagChipsContainer" class="tag-chips-container"></div>
+          <button id="manageTagsBtn" class="icon-only-btn" title="Tags">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          </button>
+        </div>
+        <div class="meta-row">
+          <input type="text" id="customTagInput" class="custom-tag-input" placeholder="# Tag" />
+          <button id="dateTriggerBtn" class="date-trigger-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span id="dateBtnLabel"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-header">
+        <span class="section-title">TASKS</span>
+        <span id="todoCount" class="section-count">0</span>
+      </div>
+      <div id="todoList" class="task-list"></div>
+    </div>
+
+    <div>
+      <div id="doneAccordionHeader" class="accordion-header">
+        <div class="accordion-title-group">
+          <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <span class="section-title">DONE</span>
+        </div>
+        <span id="doneCount" class="section-count">0</span>
+      </div>
+      <div id="doneAccordionBody" class="accordion-body">
+        <div id="doneList" class="task-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 日時選択モーダル -->
+  <div id="dateModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-title">DATE & TIME</div>
+      <div class="toggle-row">
+        <span>TIME</span>
+        <label class="switch">
+          <input type="checkbox" id="hasTimeToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <input type="date" id="datePicker" class="picker-input" />
+      <input type="datetime-local" id="datetimePicker" class="picker-input" style="display: none;" />
+      <div class="modal-actions">
+        <button id="clearDateBtn" class="modal-btn cancel">CLEAR</button>
+        <button id="saveDateBtn" class="modal-btn save">SET</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- タグ管理モーダル -->
+  <div id="tagManageModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-title">TAGS</div>
+      <div class="input-main">
+        <input type="text" id="newTagNameInput" class="picker-input" placeholder="New tag..." />
+        <button id="addNewTagBtn" class="modal-btn save" style="padding: 8px 12px; flex-shrink: 0;">Add</button>
+      </div>
+      <div id="tagManageList" class="tag-manage-list"></div>
+      <div class="modal-actions">
+        <button id="closeTagModalBtn" class="modal-btn cancel">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let db;
+    let selectedDateVal = "";
+    let selectedHasTime = false;
+    let selectedTagVal = "";
+
+    const request = indexedDB.open("QuickNoteDB", 3);
+
+    request.onupgradeneeded = (e) => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains("tasks")) {
+        db.createObjectStore("tasks", { keyPath: "id", autoIncrement: true });
+      }
+      if (!db.objectStoreNames.contains("tags")) {
+        const tagStore = db.createObjectStore("tags", { keyPath: "id", autoIncrement: true });
+        tagStore.add({ name: "重要" });
+        tagStore.add({ name: "買い物" });
+        tagStore.add({ name: "大学" });
+      }
+    };
+
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      loadAll();
+    };
+
+    function loadAll() {
+      loadTags();
+      loadTasks();
+    }
+
+    function loadTags() {
+      const tx = db.transaction("tags", "readonly");
+      const req = tx.objectStore("tags").getAll();
+      req.onsuccess = () => {
+        renderTagChips(req.result);
+        renderTagManageList(req.result);
+      };
+    }
+
+    function renderTagChips(tags) {
+      const container = document.getElementById("tagChipsContainer");
+      container.innerHTML = "";
+      tags.forEach(tag => {
+        const chip = document.createElement("button");
+        chip.className = `selectable-chip ${selectedTagVal === tag.name ? "selected" : ""}`;
+        chip.textContent = `#${tag.name}`;
+        chip.onclick = () => {
+          if (selectedTagVal === tag.name) {
+            selectedTagVal = "";
+          } else {
+            selectedTagVal = tag.name;
+            document.getElementById("customTagInput").value = "";
+          }
+          renderTagChips(tags);
+        };
+        container.appendChild(chip);
+      });
+    }
+
+    function renderTagManageList(tags) {
+      const list = document.getElementById("tagManageList");
+      list.innerHTML = "";
+      tags.forEach(tag => {
+        const item = document.createElement("div");
+        item.className = "tag-manage-item";
+        item.innerHTML = `
+          <span>#${escapeHtml(tag.name)}</span>
+          <button class="icon-btn delete-btn" onclick="deleteTag(${tag.id})">✕</button>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function addTag(name) {
+      if (!name.trim()) return;
+      const tx = db.transaction("tags", "readwrite");
+      tx.objectStore("tags").add({ name: name.trim() });
+      tx.oncomplete = () => loadTags();
+    }
+
+    function deleteTag(id) {
+      const tx = db.transaction("tags", "readwrite");
+      tx.objectStore("tags").delete(id);
+      tx.oncomplete = () => loadTags();
+    }
+
+    function loadTasks() {
+      const tx = db.transaction("tasks", "readonly");
+      const req = tx.objectStore("tasks").getAll();
+      req.onsuccess = () => renderTasks(req.result);
+    }
+
+    function renderTasks(tasks) {
+      const todoList = document.getElementById("todoList");
+      const doneList = document.getElementById("doneList");
+      const todoCount = document.getElementById("todoCount");
+      const doneCount = document.getElementById("doneCount");
+
+      todoList.innerHTML = "";
+      doneList.innerHTML = "";
+
+      const todos = tasks.filter(t => !t.completed);
+      const dones = tasks.filter(t => t.completed);
+
+      todos.sort((a, b) => {
+        if (a.pinned !== b.pinned) return b.pinned ? 1 : -1;
+        if (a.dueDate && b.dueDate) return new Date(a.dueDate) - new Date(b.dueDate);
+        if (a.dueDate) return -1;
+        if (b.dueDate) return 1;
+        return b.id - a.id;
+      });
+
+      todoCount.textContent = todos.length;
+      doneCount.textContent = dones.length;
+
+      if (todos.length === 0) {
+        todoList.innerHTML = `
+          <div class="empty-card">
+            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg>
+          </div>`;
+      } else {
+        todos.forEach(t => todoList.appendChild(createCard(t)));
+      }
+
+      if (dones.length === 0) {
+        doneList.innerHTML = `
+          <div class="empty-card">
+            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 10.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7"/><path d="m9 11 2 2 4-4"/></svg>
+          </div>`;
+      } else {
+        dones.reverse().forEach(t => doneList.appendChild(createCard(t)));
+      }
+    }
+
+    function createCard(task) {
+      const card = document.createElement("div");
+      card.className = `task-card ${task.completed ? "completed" : ""} ${task.pinned ? "is-pinned" : ""}`;
+      
+      let formattedDate = "";
+      if (task.dueDate) {
+        const d = new Date(task.dueDate);
+        if (task.hasTime) {
+          formattedDate = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        } else {
+          formattedDate = `${d.getMonth()+1}/${d.getDate()}`;
+        }
+      }
+
+      card.innerHTML = `
+        <div class="task-left">
+          <div class="checkbox" onclick="toggleTask(${task.id}, ${!task.completed})">
+            ${task.completed ? '<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M1 5L4.5 8.5L11 1.5" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+          </div>
+          <div class="task-content">
+            <span class="task-text">${escapeHtml(task.text)}</span>
+            ${(task.tag || formattedDate) ? `
+              <div class="task-badges">
+                ${task.tag ? `<span class="badge tag-badge">#${escapeHtml(task.tag)}</span>` : ''}
+                ${formattedDate ? `
+                  <span class="badge date-badge">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    ${formattedDate}
+                  </span>` : ''}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+        <div class="task-actions">
+          ${!task.completed ? `
+            <button class="icon-btn pin-btn ${task.pinned ? 'active' : ''}" onclick="togglePin(${task.id},${!task.pinned})" title="Pin">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="${task.pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </button>
+          ` : ''}
+          <button class="icon-btn delete-btn" onclick="deleteTask(${task.id})" title="Delete">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      `;
+      return card;
+    }
+
+    function addTask() {
+      const input = document.getElementById("taskInput");
+      const customTagInput = document.getElementById("customTagInput");
+      const text = input.value.trim();
+      
+      let finalTag = selectedTagVal;
+      if (customTagInput.value.trim()) {
+        finalTag = customTagInput.value.trim().replace(/^#/, '');
+        addTag(finalTag);
+      }
+
+      if (!text) return;
+
+      const tx = db.transaction("tasks", "readwrite");
+      tx.objectStore("tasks").add({
+        text: text,
+        tag: finalTag,
+        dueDate: selectedDateVal,
+        hasTime: selectedHasTime,
+        pinned: false,
+        completed: false
+      });
+
+      tx.oncomplete = () => {
+        input.value = "";
+        customTagInput.value = "";
+        selectedTagVal = "";
+        clearDateSelection();
+        loadAll();
+      };
+    }
+
+    function toggleTask(id, completed) {
+      const tx = db.transaction("tasks", "readwrite");
+      const store = tx.objectStore("tasks");
+      const req = store.get(id);
+      req.onsuccess = () => {
+        const task = req.result;
+        task.completed = completed;
+        store.put(task);
+      };
+      tx.oncomplete = () => loadTasks();
+    }
+
+    function togglePin(id, pinned) {
+      const tx = db.transaction("tasks", "readwrite");
+      const store = tx.objectStore("tasks");
+      const req = store.get(id);
+      req.onsuccess = () => {
+        const task = req.result;
+        task.pinned = pinned;
+        store.put(task);
+      };
+      tx.oncomplete = () => loadTasks();
+    }
+
+    function deleteTask(id) {
+      const tx = db.transaction("tasks", "readwrite");
+      tx.objectStore("tasks").delete(id);
+      tx.oncomplete = () => loadTasks();
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    /* UI操作イベント */
+    const doneAccordionHeader = document.getElementById("doneAccordionHeader");
+    const doneAccordionBody = document.getElementById("doneAccordionBody");
+    doneAccordionHeader.addEventListener("click", () => {
+      doneAccordionHeader.classList.toggle("open");
+      doneAccordionBody.classList.toggle("open");
+    });
+
+    const tagManageModal = document.getElementById("tagManageModal");
+    document.getElementById("manageTagsBtn").addEventListener("click", () => tagManageModal.classList.add("open"));
+    document.getElementById("closeTagModalBtn").addEventListener("click", () => tagManageModal.classList.remove("open"));
+    document.getElementById("addNewTagBtn").addEventListener("click", () => {
+      const input = document.getElementById("newTagNameInput");
+      if (input.value.trim()) {
+        addTag(input.value.trim());
+        input.value = "";
+      }
+    });
+
+    const dateModal = document.getElementById("dateModal");
+    const dateTriggerBtn = document.getElementById("dateTriggerBtn");
+    const dateBtnLabel = document.getElementById("dateBtnLabel");
+    const hasTimeToggle = document.getElementById("hasTimeToggle");
+    const datePicker = document.getElementById("datePicker");
+    const datetimePicker = document.getElementById("datetimePicker");
+
+    dateTriggerBtn.addEventListener("click", () => dateModal.classList.add("open"));
+
+    hasTimeToggle.addEventListener("change", (e) => {
+      if (e.target.checked) {
+        datePicker.style.display = "none";
+        datetimePicker.style.display = "block";
+      } else {
+        datePicker.style.display = "block";
+        datetimePicker.style.display = "none";
+      }
+    });
+
+    document.getElementById("saveDateBtn").addEventListener("click", () => {
+      selectedHasTime = hasTimeToggle.checked;
+      selectedDateVal = selectedHasTime ? datetimePicker.value : datePicker.value;
+      
+      if (selectedDateVal) {
+        dateTriggerBtn.classList.add("has-value");
+        const d = new Date(selectedDateVal);
+        dateBtnLabel.textContent = selectedHasTime 
+          ? `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+          : `${d.getMonth()+1}/${d.getDate()}`;
+      } else {
+        clearDateSelection();
+      }
+      dateModal.classList.remove("open");
+    });
+
+    document.getElementById("clearDateBtn").addEventListener("click", () => {
+      clearDateSelection();
+      dateModal.classList.remove("open");
+    });
+
+    function clearDateSelection() {
+      selectedDateVal = "";
+      selectedHasTime = false;
+      datePicker.value = "";
+      datetimePicker.value = "";
+      hasTimeToggle.checked = false;
+      datePicker.style.display = "block";
+      datetimePicker.style.display = "none";
+      dateTriggerBtn.classList.remove("has-value");
+      dateBtnLabel.textContent = "";
+    }
+
+    document.getElementById("addBtn").addEventListener("click", addTask);
+    document.getElementById("taskInput").addEventListener("keypress", (e) => {
+      if (e.key === "Enter") addTask();
+    });
+    if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+  </script>
+</body>
+</html>
