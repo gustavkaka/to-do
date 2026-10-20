@@ -2,7 +2,7 @@
   "name": "爆速ToDoメモ",
   "short_name": "QuickNote",
   "description": "言われた瞬間にメモできる爆速ToDoアプリ",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0B0B0C",
